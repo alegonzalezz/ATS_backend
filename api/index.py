@@ -5,8 +5,8 @@ import uuid
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
-from database import query_table, insert_record, update_record, delete_record
-from applicants import (
+from .database import query_table, insert_record, update_record, delete_record
+from .applicants import (
     Applicant,
     get_all_applicants,
     get_applicant_by_id,
@@ -17,7 +17,7 @@ from applicants import (
     deactivate_applicant,
     reactivate_applicant,
 )
-from clients import (
+from .clients import (
     Client,
     get_all_clients,
     get_client_by_id,
@@ -28,7 +28,7 @@ from clients import (
     deactivate_client,
     reactivate_client,
 )
-from recruiters import (
+from .recruiters import (
     Recruiter,
     get_all_recruiters,
     get_recruiter_by_id,
@@ -39,7 +39,7 @@ from recruiters import (
     deactivate_recruiter,
     reactivate_recruiter,
 )
-from job_descriptions import (
+from .job_descriptions import (
     JobDescription,
     get_all_job_descriptions,
     get_job_description_by_id,
@@ -51,7 +51,7 @@ from job_descriptions import (
     reopen_job_description,
     change_job_status,
 )
-from applicant_job_apply import (
+from .applicant_job_apply import (
     ApplicantJobApply,
     get_all_applications,
     get_application_by_id,

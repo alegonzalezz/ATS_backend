@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
-from database import (
+from .database import (
     query_table,
     insert_record,
     update_record,
