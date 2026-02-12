@@ -50,7 +50,10 @@ def query_table(table_name: str, filters: dict = None):
     
     if filters:
         for column, value in filters.items():
-            query = query.eq(column, value)
+            if value is None:
+                query = query.is_(column, None)
+            else:
+                query = query.eq(column, value)
     
     response = query.execute()
     return response.data
