@@ -16,6 +16,7 @@ from .database import (
 @dataclass
 class Client:
     """Client data model"""
+    name: Optional[str] = None
     description: Optional[str] = None
     id: Optional[uuid.UUID] = None
     created_at: Optional[datetime] = None
@@ -24,6 +25,8 @@ class Client:
     def to_dict(self) -> Dict[str, Any]:
         """Convert client to dictionary"""
         data = {}
+        if self.name is not None:
+            data["name"] = self.name
         if self.description is not None:
             data["description"] = self.description
         if self.id:
@@ -35,6 +38,7 @@ class Client:
         """Create Client from dictionary"""
         return cls(
             id=uuid.UUID(data["id"]) if data.get("id") else None,
+            name=data.get("name"),
             description=data.get("description"),
             created_at=datetime.fromisoformat(data["created_at"]) if data.get("created_at") else None,
             deactive=datetime.fromisoformat(data["deactive"]) if data.get("deactive") else None,
@@ -80,11 +84,12 @@ def get_client_by_id(client_id: str) -> Optional[Client]:
     return None
 
 
-def search_clients(description: Optional[str] = None) -> List[Client]:
+def search_clients(name: Optional[str] = None, description: Optional[str] = None) -> List[Client]:
     """
-    Search clients by description
+    Search clients by name or description
     
     Args:
+        name: Filter by name (partial match)
         description: Filter by description (partial match)
         
     Returns:
@@ -95,6 +100,13 @@ def search_clients(description: Optional[str] = None) -> List[Client]:
     clients = [Client.from_dict(record) for record in data]
     
     # Apply partial match filtering in Python
+    if name:
+        name_lower = name.lower()
+        clients = [
+            c for c in clients 
+            if c.name and name_lower in c.name.lower()
+        ]
+    
     if description:
         desc_lower = description.lower()
         clients = [

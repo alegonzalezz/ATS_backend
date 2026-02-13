@@ -477,6 +477,7 @@ def list_clients():
             "success": True,
             "data": [{
                 "id": str(c.id),
+                "name": c.name,
                 "description": c.description,
                 "created_at": c.created_at.isoformat() if c.created_at else None,
                 "deactive": c.deactive.isoformat() if c.deactive else None,
@@ -490,16 +491,18 @@ def list_clients():
 
 @app.route('/api/clients/search', methods=['GET'])
 def search_clients_endpoint():
-    """Search clients by description"""
+    """Search clients by name or description"""
     try:
+        name = request.args.get('name')
         description = request.args.get('description')
         
-        clients = search_clients(description=description)
+        clients = search_clients(name=name, description=description)
         
         return jsonify({
             "success": True,
             "data": [{
                 "id": str(c.id),
+                "name": c.name,
                 "description": c.description,
                 "created_at": c.created_at.isoformat() if c.created_at else None,
             } for c in clients],
@@ -523,6 +526,7 @@ def get_client(client_id):
             "success": True,
             "data": {
                 "id": str(client.id),
+                "name": client.name,
                 "description": client.description,
                 "created_at": client.created_at.isoformat() if client.created_at else None,
                 "deactive": client.deactive.isoformat() if client.deactive else None,
@@ -539,8 +543,12 @@ def create_client_endpoint():
     try:
         data = request.get_json()
         
+        if not data or 'name' not in data:
+            return jsonify({"success": False, "error": "Name is required"}), 400
+        
         client = Client(
-            description=data.get('description') if data else None
+            name=data['name'],
+            description=data.get('description')
         )
         
         created = create_client(client)
@@ -549,6 +557,7 @@ def create_client_endpoint():
             "success": True,
             "data": {
                 "id": str(created.id),
+                "name": created.name,
                 "description": created.description,
             },
             "message": "Client created successfully"
@@ -576,6 +585,7 @@ def update_client_endpoint(client_id):
             "success": True,
             "data": {
                 "id": str(updated.id),
+                "name": updated.name,
                 "description": updated.description,
             },
             "message": "Client updated successfully"
