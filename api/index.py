@@ -840,6 +840,7 @@ def list_job_descriptions():
             "success": True,
             "data": [{
                 "id": str(j.id),
+                "title": j.title,
                 "description": j.description,
                 "min_salary": j.min_salary,
                 "max_salary": j.max_salary,
@@ -878,6 +879,7 @@ def search_job_descriptions_endpoint():
             "success": True,
             "data": [{
                 "id": str(j.id),
+                "title": j.title,
                 "description": j.description,
                 "min_salary": j.min_salary,
                 "max_salary": j.max_salary,
@@ -905,6 +907,7 @@ def get_job_description(job_id):
             "success": True,
             "data": {
                 "id": str(job.id),
+                "title": job.title,
                 "description": job.description,
                 "min_salary": job.min_salary,
                 "max_salary": job.max_salary,
@@ -929,9 +932,11 @@ def create_job_description_endpoint():
         if not data:
             return jsonify({"success": False, "error": "No data provided"}), 400
         
-        # Required field
-        if 'min_salary' not in data:
-            return jsonify({"success": False, "error": "min_salary is required"}), 400
+        # Required fields
+        required = ['min_salary', 'title']
+        missing = [f for f in required if f not in data]
+        if missing:
+            return jsonify({"success": False, "error": f"Missing fields: {', '.join(missing)}"}), 400
         
         # Parse client_id if provided
         client_id = None
@@ -939,6 +944,7 @@ def create_job_description_endpoint():
             client_id = uuid.UUID(data['client_id'])
         
         job = JobDescription(
+            title=data['title'],
             description=data.get('description'),
             min_salary=float(data['min_salary']),
             max_salary=float(data['max_salary']) if data.get('max_salary') else None,
@@ -953,6 +959,7 @@ def create_job_description_endpoint():
             "success": True,
             "data": {
                 "id": str(created.id),
+                "title": created.title,
                 "description": created.description,
                 "min_salary": created.min_salary,
                 "max_salary": created.max_salary,
@@ -983,6 +990,7 @@ def update_job_description_endpoint(job_id):
             "success": True,
             "data": {
                 "id": str(updated.id),
+                "title": updated.title,
                 "description": updated.description,
                 "min_salary": updated.min_salary,
                 "max_salary": updated.max_salary,

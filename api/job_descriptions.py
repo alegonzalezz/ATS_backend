@@ -17,6 +17,7 @@ from .database import (
 class JobDescription:
     """Job Description data model"""
     min_salary: float
+    title: str
     status: str = "OPEN"
     description: Optional[str] = None
     max_salary: Optional[float] = None
@@ -30,6 +31,7 @@ class JobDescription:
         """Convert job description to dictionary"""
         data = {
             "min_salary": self.min_salary,
+            "title": self.title,
             "status": self.status,
         }
         if self.description is not None:
@@ -48,6 +50,7 @@ class JobDescription:
         return cls(
             id=uuid.UUID(data["id"]) if data.get("id") else None,
             min_salary=data.get("min_salary", 0.0),
+            title=data.get("title", ""),
             max_salary=data.get("max_salary"),
             description=data.get("description"),
             status=data.get("status", "OPEN"),
