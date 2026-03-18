@@ -71,6 +71,16 @@ from .comments import (
     update_comment,
     delete_comment,
 )
+from .skills import (
+    Skill,
+    get_all_skills,
+    get_skill_by_id,
+    create_skill,
+    update_skill_status,
+    get_applicant_skills,
+    add_skill_to_applicant,
+    update_applicant_skill_status,
+)
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -1477,6 +1487,147 @@ def delete_comment_endpoint(comment_id):
             "message": "Comment deleted successfully"
         }), 200
 
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ============================
+# SKILLS API ENDPOINTS
+# ============================
+
+@app.route('/api/skills', methods=['GET'])
+def list_skills():
+    """Get all skills (active by default)"""
+    try:
+        include_inactive = request.args.get('include_inactive', 'false').lower() == 'true'
+        search = request.args.get('search')
+        
+        skills = get_all_skills(include_inactive=include_inactive, search=search)
+        
+        return jsonify({
+            "success": True,
+            "data": [s.to_dict() for s in skills],
+            "count": len(skills)
+        }), 200
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/skills', methods=['POST'])
+def create_skill_endpoint():
+    """Create a new skill"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'name' not in data:
+            return jsonify({"success": False, "error": "Name is required"}), 400
+        
+        skill = create_skill(data['name'])
+        
+        return jsonify({
+            "success": True,
+            "data": skill.to_dict(),
+            "message": "Skill created successfully"
+        }), 201
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/skills/<skill_id>', methods=['PATCH'])
+def update_skill_endpoint(skill_id):
+    """Activate or deactivate a skill"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'deactive_at' not in data:
+            return jsonify({"success": False, "error": "deactive_at field is required"}), 400
+        
+        # Parse deactive_at if provided
+        deactive_at = None
+        if data['deactive_at']:
+            from datetime import datetime
+            deactive_at = datetime.fromisoformat(data['deactive_at'])
+        
+        skill = update_skill_status(skill_id, deactive_at)
+        
+        return jsonify({
+            "success": True,
+            "data": skill.to_dict(),
+            "message": "Skill status updated successfully"
+        }), 200
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/applicants/<applicant_id>/skills', methods=['GET'])
+def list_applicant_skills(applicant_id):
+    """Get all skills for an applicant"""
+    try:
+        include_inactive = request.args.get('include_inactive', 'false').lower() == 'true'
+        
+        skills = get_applicant_skills(applicant_id, include_inactive=include_inactive)
+        
+        return jsonify({
+            "success": True,
+            "data": [s.to_dict() for s in skills],
+            "count": len(skills)
+        }), 200
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/applicants/<applicant_id>/skills', methods=['POST'])
+def add_skill_to_applicant_endpoint(applicant_id):
+    """Add a skill to an applicant"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'skill_id' not in data:
+            return jsonify({"success": False, "error": "skill_id is required"}), 400
+        
+        result = add_skill_to_applicant(applicant_id, data['skill_id'])
+        
+        if not result['success']:
+            return jsonify(result), 400
+        
+        return jsonify({
+            "success": True,
+            "message": result.get('message', 'Skill added to applicant')
+        }), 201
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/applicants/<applicant_id>/skills/<skill_id>', methods=['PATCH'])
+def update_applicant_skill_endpoint(applicant_id, skill_id):
+    """Activate or deactivate an applicant-skill association"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'deactive_at' not in data:
+            return jsonify({"success": False, "error": "deactive_at field is required"}), 400
+        
+        # Parse deactive_at if provided
+        deactive_at = None
+        if data['deactive_at']:
+            from datetime import datetime
+            deactive_at = datetime.fromisoformat(data['deactive_at'])
+        
+        result = update_applicant_skill_status(applicant_id, skill_id, deactive_at)
+        
+        if not result['success']:
+            return jsonify(result), 404
+        
+        return jsonify({
+            "success": True,
+            "message": result.get('message', 'Skill association status updated')
+        }), 200
+        
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
