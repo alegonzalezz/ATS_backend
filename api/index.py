@@ -250,6 +250,41 @@ def delete_record_endpoint(table_name, record_id):
 # APPLICANTS API ENDPOINTS
 # ============================
 
+def format_applicant_with_comments(a, comments_raw):
+    """Format applicant with comments, including recruiter info"""
+    comments = []
+    for c in comments_raw:
+        recruiter_info = None
+        recruiter_data = c.get("recruiter")
+        if recruiter_data:
+            recruiter_id = recruiter_data.get("id") or c.get("recruiter_id")
+            recruiter_info = {
+                "id": str(recruiter_id) if recruiter_id else None,
+                "name": recruiter_data.get("name", "Reclutador"),
+            }
+        comments.append({
+            "id": str(c.get("id")),
+            "recruiter_id": str(c.get("recruiter_id")) if c.get("recruiter_id") else None,
+            "comment": c.get("comment"),
+            "created_at": c.get("created_at"),
+            "recruiter": recruiter_info,
+        })
+    
+    return {
+        "id": str(a.id),
+        "name": a.name,
+        "last_name": a.last_name,
+        "linkedin": a.linkedin,
+        "email": a.email,
+        "phone": a.phone,
+        "city": a.city,
+        "english": a.english,
+        "created_at": a.created_at.isoformat() if a.created_at else None,
+        "deactive_at": a.deactive_at.isoformat() if a.deactive_at else None,
+        "comments": comments,
+    }
+
+
 @app.route('/api/applicants', methods=['GET'])
 def list_applicants():
     """Get all applicants (active by default)"""
@@ -257,20 +292,15 @@ def list_applicants():
         include_inactive = request.args.get('include_inactive', 'false').lower() == 'true'
         applicants = get_all_applicants(include_inactive=include_inactive)
         
+        # Get comments for each applicant
+        applicants_data = []
+        for a in applicants:
+            comments_raw = get_comments_by_applicant_id(str(a.id))
+            applicants_data.append(format_applicant_with_comments(a, comments_raw))
+        
         return jsonify({
             "success": True,
-            "data": [{
-                "id": str(a.id),
-                "name": a.name,
-                "last_name": a.last_name,
-                "linkedin": a.linkedin,
-                "email": a.email,
-                "phone": a.phone,
-                "city": a.city,
-                "english": a.english,
-                "created_at": a.created_at.isoformat() if a.created_at else None,
-                "deactive_at": a.deactive_at.isoformat() if a.deactive_at else None,
-            } for a in applicants],
+            "data": applicants_data,
             "count": len(applicants)
         }), 200
         
@@ -323,39 +353,11 @@ def get_applicant(applicant_id):
             return jsonify({"success": False, "error": "Applicant not found"}), 404
 
         comments_raw = get_comments_by_applicant_id(applicant_id)
-        comments = []
-        for c in comments_raw:
-            recruiter_info = None
-            recruiter_data = c.get("recruiter")
-            if recruiter_data:
-                recruiter_id = recruiter_data.get("id") or c.get("recruiter_id")
-                recruiter_info = {
-                    "id": str(recruiter_id) if recruiter_id else None,
-                    "name": recruiter_data.get("name", "Reclutador"),
-                }
-            comments.append({
-                "id": str(c.get("id")),
-                "recruiter_id": str(c.get("recruiter_id")) if c.get("recruiter_id") else None,
-                "comment": c.get("comment"),
-                "created_at": c.get("created_at"),
-                "recruiter": recruiter_info,
-            })
+        applicant_data = format_applicant_with_comments(applicant, comments_raw)
 
         return jsonify({
             "success": True,
-            "data": {
-                "id": str(applicant.id),
-                "name": applicant.name,
-                "last_name": applicant.last_name,
-                "linkedin": applicant.linkedin,
-                "email": applicant.email,
-                "phone": applicant.phone,
-                "city": applicant.city,
-                "english": applicant.english,
-                "created_at": applicant.created_at.isoformat() if applicant.created_at else None,
-                "deactive_at": applicant.deactive_at.isoformat() if applicant.deactive_at else None,
-                "comments": comments,
-            }
+            "data": applicant_data
         }), 200
 
     except Exception as e:
