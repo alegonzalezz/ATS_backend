@@ -55,8 +55,6 @@ from .applicant_job_apply import (
     ApplicantJobApply,
     get_all_applications,
     get_application_by_id,
-    get_applications_by_applicant,
-    get_applications_by_job,
     search_applications,
     create_application,
     update_application,
@@ -65,6 +63,13 @@ from .applicant_job_apply import (
     reactivate_application,
     assign_recruiter,
     unassign_recruiter,
+)
+from .comments import (
+    Comment,
+    get_comments_by_applicant_id,
+    create_comment,
+    update_comment,
+    delete_comment,
 )
 
 # Initialize Flask app
@@ -313,10 +318,28 @@ def get_applicant(applicant_id):
     """Get a single applicant by ID"""
     try:
         applicant = get_applicant_by_id(applicant_id)
-        
+
         if not applicant:
             return jsonify({"success": False, "error": "Applicant not found"}), 404
-        
+
+        comments_raw = get_comments_by_applicant_id(applicant_id)
+        comments = []
+        for c in comments_raw:
+            recruiter_info = None
+            if c.get("recruiter"):
+                r = c["recruiter"]
+                recruiter_info = {
+                    "id": str(r["id"]) if r.get("id") else None,
+                    "name": r.get("name"),
+                }
+            comments.append({
+                "id": c["id"],
+                "recruiter_id": c.get("recruiter_id"),
+                "comment": c.get("comment"),
+                "created_at": c["created_at"],
+                "recruiter": recruiter_info,
+            })
+
         return jsonify({
             "success": True,
             "data": {
@@ -330,9 +353,10 @@ def get_applicant(applicant_id):
                 "english": applicant.english,
                 "created_at": applicant.created_at.isoformat() if applicant.created_at else None,
                 "deactive_at": applicant.deactive_at.isoformat() if applicant.deactive_at else None,
+                "comments": comments,
             }
         }), 200
-        
+
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -1354,6 +1378,102 @@ def unassign_recruiter_endpoint(application_id):
             "message": "Recruiter unassigned successfully"
         }), 200
         
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ============================
+# COMMENTS API ENDPOINTS
+# ============================
+
+@app.route('/api/comments', methods=['POST'])
+def create_comment_endpoint():
+    """Create a new comment for an applicant"""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"success": False, "error": "No data provided"}), 400
+
+        if 'applicant_id' not in data:
+            return jsonify({"success": False, "error": "applicant_id is required"}), 400
+        if 'recruiter_id' not in data:
+            return jsonify({"success": False, "error": "recruiter_id is required"}), 400
+        if 'comment' not in data:
+            return jsonify({"success": False, "error": "comment is required"}), 400
+
+        applicant_id = uuid.UUID(data['applicant_id'])
+        recruiter_id = uuid.UUID(data['recruiter_id'])
+
+        comment = Comment(
+            recruiter_id=recruiter_id,
+            comment=data['comment'],
+            applicant_id=applicant_id,
+        )
+
+        created = create_comment(comment)
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "id": str(created.id),
+                "applicant_id": str(created.applicant_id),
+                "recruiter_id": str(created.recruiter_id),
+                "comment": created.comment,
+                "created_at": created.created_at.isoformat() if created.created_at else None,
+            },
+            "message": "Comment created successfully"
+        }), 201
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/comments/<comment_id>', methods=['PUT'])
+def update_comment_endpoint(comment_id):
+    """Update a comment"""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"success": False, "error": "No data provided"}), 400
+
+        if 'comment' not in data:
+            return jsonify({"success": False, "error": "comment is required"}), 400
+
+        updates = {"comment": data['comment']}
+        updated = update_comment(comment_id, updates)
+
+        if not updated:
+            return jsonify({"success": False, "error": "Comment not found"}), 404
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "id": str(updated.id),
+                "comment": updated.comment,
+            },
+            "message": "Comment updated successfully"
+        }), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/comments/<comment_id>', methods=['DELETE'])
+def delete_comment_endpoint(comment_id):
+    """Delete a comment"""
+    try:
+        success = delete_comment(comment_id)
+
+        if not success:
+            return jsonify({"success": False, "error": "Comment not found"}), 404
+
+        return jsonify({
+            "success": True,
+            "message": "Comment deleted successfully"
+        }), 200
+
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

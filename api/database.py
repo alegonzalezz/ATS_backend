@@ -116,3 +116,27 @@ def delete_record(table_name: str, record_id):
     client = get_supabase_client()
     response = client.table(table_name).delete().eq("id", record_id).execute()
     return response.data
+
+
+def get_comments_by_applicant(applicant_id: str, limit: int = 5):
+    """
+    Get comments for a specific applicant with recruiter info joined,
+    ordered by most recent first.
+
+    Args:
+        applicant_id: UUID of the applicant
+        limit: Maximum number of comments to return (default 5)
+
+    Returns:
+        List of comment dictionaries with recruiter info
+    """
+    client = get_supabase_client()
+    response = (
+        client.table("comments")
+        .select("*, recruiter(id, name)")
+        .eq("applicant_id", applicant_id)
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return response.data
