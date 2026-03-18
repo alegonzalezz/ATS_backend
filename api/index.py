@@ -326,17 +326,18 @@ def get_applicant(applicant_id):
         comments = []
         for c in comments_raw:
             recruiter_info = None
-            if c.get("recruiter"):
-                r = c["recruiter"]
+            recruiter_data = c.get("recruiter")
+            if recruiter_data:
+                recruiter_id = recruiter_data.get("id") or c.get("recruiter_id")
                 recruiter_info = {
-                    "id": str(r["id"]) if r.get("id") else None,
-                    "name": r.get("name"),
+                    "id": str(recruiter_id) if recruiter_id else None,
+                    "name": recruiter_data.get("name", "Reclutador"),
                 }
             comments.append({
-                "id": c["id"],
-                "recruiter_id": c.get("recruiter_id"),
+                "id": str(c.get("id")),
+                "recruiter_id": str(c.get("recruiter_id")) if c.get("recruiter_id") else None,
                 "comment": c.get("comment"),
-                "created_at": c["created_at"],
+                "created_at": c.get("created_at"),
                 "recruiter": recruiter_info,
             })
 
