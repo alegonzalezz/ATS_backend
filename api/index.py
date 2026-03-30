@@ -943,36 +943,24 @@ def search_job_descriptions_endpoint():
 
 @app.route('/api/job-descriptions/<job_id>', methods=['GET'])
 def get_job_description(job_id):
-    """Get a single job description by ID"""
+    """Get a single job description by ID, including required/preferred skills"""
+    from .job_descriptions import get_job_description_with_skills
     try:
-        job = get_job_description_by_id(job_id)
-        
+        job = get_job_description_with_skills(job_id)
         if not job:
             return jsonify({"success": False, "error": "Job description not found"}), 404
-        
         return jsonify({
             "success": True,
-            "data": {
-                "id": str(job.id),
-                "title": job.title,
-                "description": job.description,
-                "min_salary": job.min_salary,
-                "max_salary": job.max_salary,
-                "status": job.status,
-                "recruiter_id": job.recruiter_id,
-                "client_id": str(job.client_id) if job.client_id else None,
-                "created_at": job.created_at.isoformat() if job.created_at else None,
-                "deactive_at": job.deactive_at.isoformat() if job.deactive_at else None,
-            }
+            "data": job
         }), 200
-        
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+
 @app.route('/api/job-descriptions', methods=['POST'])
 def create_job_description_endpoint():
-    """Create a new job description"""
+    """Create a new job description with required/preferred skills"""
     try:
         data = request.get_json()
         
@@ -1000,18 +988,18 @@ def create_job_description_endpoint():
             client_id=client_id,
         )
         
-        created = create_job_description(job)
+        # Skill arrays
+        skills_required = data.get('skills_required', [])
+        skills_preferred = data.get('skills_preferred', [])
+
+        from .job_descriptions import create_job_description_with_skills, get_job_description_with_skills
+        
+        created = create_job_description_with_skills(job, skills_required, skills_preferred)
+        result = get_job_description_with_skills(str(created.id))
         
         return jsonify({
             "success": True,
-            "data": {
-                "id": str(created.id),
-                "title": created.title,
-                "description": created.description,
-                "min_salary": created.min_salary,
-                "max_salary": created.max_salary,
-                "status": created.status,
-            },
+            "data": result,
             "message": "Job description created successfully"
         }), 201
         
@@ -1021,28 +1009,27 @@ def create_job_description_endpoint():
 
 @app.route('/api/job-descriptions/<job_id>', methods=['PUT'])
 def update_job_description_endpoint(job_id):
-    """Update a job description"""
+    """Update a job description and its required/preferred skills"""
     try:
         data = request.get_json()
         
         if not data:
             return jsonify({"success": False, "error": "No data provided"}), 400
         
-        updated = update_job_description(job_id, data)
-        
+        # Skill arrays
+        skills_required = data.pop('skills_required', [])
+        skills_preferred = data.pop('skills_preferred', [])
+
+        from .job_descriptions import update_job_description_with_skills, get_job_description_with_skills
+        updated = update_job_description_with_skills(job_id, data, skills_required, skills_preferred)
+
         if not updated:
             return jsonify({"success": False, "error": "Job description not found"}), 404
         
+        result = get_job_description_with_skills(str(updated.id))
         return jsonify({
             "success": True,
-            "data": {
-                "id": str(updated.id),
-                "title": updated.title,
-                "description": updated.description,
-                "min_salary": updated.min_salary,
-                "max_salary": updated.max_salary,
-                "status": updated.status,
-            },
+            "data": result,
             "message": "Job description updated successfully"
         }), 200
         
